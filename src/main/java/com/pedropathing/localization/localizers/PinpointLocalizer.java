@@ -1,22 +1,19 @@
-package com.pedropathing.localization.localizers;
+package org.firstinspires.ftc.teamcode.pedroPathing.localization.localizers;
 
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import static com.pedropathing.localization.constants.PinpointConstants.*;
-
-import android.os.Build;
-
-import androidx.annotation.RequiresApi;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
-import com.pedropathing.localization.GoBildaPinpointDriver;
-import com.pedropathing.localization.Localizer;
-import com.pedropathing.localization.Pose;
-import com.pedropathing.pathgen.MathFunctions;
-import com.pedropathing.pathgen.Vector;
-import com.pedropathing.util.NanoTimer;
+import org.firstinspires.ftc.teamcode.pedroPathing.localization.GoBildaPinpointDriver;
+import org.firstinspires.ftc.teamcode.pedroPathing.localization.Localizer;
+import org.firstinspires.ftc.teamcode.pedroPathing.localization.Pose;
+import org.firstinspires.ftc.teamcode.pedroPathing.pathGeneration.MathFunctions;
+import org.firstinspires.ftc.teamcode.pedroPathing.pathGeneration.Vector;
+import org.firstinspires.ftc.teamcode.pedroPathing.util.NanoTimer;
+
+import java.util.Objects;
 
 /**
  * This is the Pinpoint class. This class extends the Localizer superclass and is a
@@ -57,7 +54,7 @@ public class PinpointLocalizer extends Localizer {
     private long deltaTimeNano;
     private NanoTimer timer;
     private Pose currentVelocity;
-    private Pose previousPinpointPose;
+    private Pose pinpointPose;
 
     /**
      * This creates a new PinpointLocalizer from a HardwareMap, with a starting Pose at (0,0)
@@ -77,30 +74,29 @@ public class PinpointLocalizer extends Localizer {
     public PinpointLocalizer(HardwareMap map, Pose setStartPose){
         hardwareMap = map;
 
-        odo = hardwareMap.get(GoBildaPinpointDriver.class,hardwareMapName);
-        setOffsets(forwardY, strafeX, distanceUnit);
+        odo = hardwareMap.get(GoBildaPinpointDriver.class,"pinpoint");
 
-        if(useYawScalar) {
-            odo.setYawScalar(yawScalar);
-        }
+        //The default units are inches, but you can swap the units if you wish.
+        //If you have already tuned the TwoWheelLocalizer, you can simply use the forwardEncoderPose's y value and strafeEncoderPose's x values.
+        setOffsets(-2.815, 0.125, DistanceUnit.INCH); //these are tuned for 3110-0002-0001 Product Insight #1
 
-        if(useCustomEncoderResolution) {
-            odo.setEncoderResolution(customEncoderResolution);
-        } else {
-            odo.setEncoderResolution(encoderResolution);
-        }
+        //TODO: Tune urself if needed
+//        odo.setYawScalar(1.0);
 
-        odo.setEncoderDirections(forwardEncoderDirection, strafeEncoderDirection);
+        odo.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        //odo.setEncoderResolution(13.26291192);
+
+        odo.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
         resetPinpoint();
 
         setStartPose(setStartPose);
         totalHeading = 0;
         timer = new NanoTimer();
-        previousPinpointPose = new Pose();
+        pinpointPose = setStartPose;
         currentVelocity = new Pose();
         deltaTimeNano = 1;
-        previousHeading = setStartPose.getHeading();
+        previousHeading = pinpointPose.getHeading();
     }
 
     /**
@@ -110,7 +106,7 @@ public class PinpointLocalizer extends Localizer {
      */
     @Override
     public Pose getPose() {
-        return MathFunctions.addPoses(startPose, MathFunctions.rotatePose(previousPinpointPose, startPose.getHeading(), false));
+        return pinpointPose.copy();
     }
 
     /**
@@ -141,6 +137,13 @@ public class PinpointLocalizer extends Localizer {
      */
     @Override
     public void setStartPose(Pose setStart) {
+        if (!Objects.equals(startPose, new Pose())) {
+            Pose currentPose = MathFunctions.subtractPoses(MathFunctions.rotatePose(pinpointPose, -startPose.getHeading(), false), startPose);
+            setPose(MathFunctions.addPoses(setStart, MathFunctions.rotatePose(currentPose, setStart.getHeading(), false)));
+        } else {
+            setPose(setStart);
+        }
+
         this.startPose = setStart;
     }
 
@@ -152,26 +155,25 @@ public class PinpointLocalizer extends Localizer {
      */
     @Override
     public void setPose(Pose setPose) {
-        Pose setNewPose = MathFunctions.subtractPoses(setPose, startPose);
-        odo.setPosition(new Pose2D(DistanceUnit.INCH, setNewPose.getX(), setNewPose.getY(), AngleUnit.RADIANS, setNewPose.getHeading()));
+        odo.setPosition(new Pose2D(DistanceUnit.INCH, setPose.getX(), setPose.getY(), AngleUnit.RADIANS, setPose.getHeading()));
+        pinpointPose = setPose;
     }
 
     /**
      * This updates the total heading of the robot. The Pinpoint handles all other updates itself.
      */
-    @RequiresApi(api = Build.VERSION_CODES.GINGERBREAD)
     @Override
     public void update() {
         deltaTimeNano = timer.getElapsedTime();
         timer.resetTimer();
         odo.update();
-        Pose2D pinpointPose = odo.getPosition();
-        Pose currentPinpointPose = new Pose(pinpointPose.getX(DistanceUnit.INCH), pinpointPose.getY(DistanceUnit.INCH), pinpointPose.getHeading(AngleUnit.RADIANS));
+        Pose2D pinpointPose2D = odo.getPosition();
+        Pose currentPinpointPose = new Pose(pinpointPose2D.getX(DistanceUnit.INCH), pinpointPose2D.getY(DistanceUnit.INCH), pinpointPose2D.getHeading(AngleUnit.RADIANS));
         totalHeading += MathFunctions.getSmallestAngleDifference(currentPinpointPose.getHeading(), previousHeading);
         previousHeading = currentPinpointPose.getHeading();
-        Pose deltaPose = MathFunctions.subtractPoses(currentPinpointPose, previousPinpointPose);
+        Pose deltaPose = MathFunctions.subtractPoses(currentPinpointPose, pinpointPose);
         currentVelocity = new Pose(deltaPose.getX() / (deltaTimeNano / Math.pow(10.0, 9)), deltaPose.getY() / (deltaTimeNano / Math.pow(10.0, 9)), deltaPose.getHeading() / (deltaTimeNano / Math.pow(10.0, 9)));
-        previousPinpointPose = currentPinpointPose;
+        pinpointPose = currentPinpointPose;
     }
 
     /**
