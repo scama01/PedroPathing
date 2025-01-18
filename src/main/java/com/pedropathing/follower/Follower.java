@@ -478,7 +478,7 @@ public class Follower {
      * @param pathChain the PathChain to follow.
      */
     public void followPath(PathChain pathChain, boolean holdEnd) {
-        followPath(pathChain, holdEnd, 1);
+        followPath(pathChain, holdEnd);
     }
 
     /**
@@ -490,11 +490,7 @@ public class Follower {
         followPath(pathChain, false);
     }
 
-    public void followPath(PathChain pathChain, boolean holdEnd, double driveMultiplier) {
-        followPath(pathChain, globalMaxPower, holdEnd, driveMultiplier);
-    }
-
-    private void followPath(PathChain pathChain, double maxPower, boolean holdEnd, double driveMultiplier) {
+    private void followPath(PathChain pathChain, double maxPower, boolean holdEnd) {
         driveVectorScaler.setMaxPowerScaling(maxPower);
         breakFollowing();
         holdPositionAtEnd = holdEnd;
@@ -506,10 +502,6 @@ public class Follower {
         currentPathChain = pathChain;
         currentPath = pathChain.getPath(chainIndex);
         closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
-    }
-
-    public void followPath(PathChain pathChain, double maxPower, boolean holdEnd) {
-        followPath(pathChain, maxPower, holdEnd, 1);
     }
 
     /**
