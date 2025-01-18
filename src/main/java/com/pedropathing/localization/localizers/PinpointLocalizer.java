@@ -52,7 +52,7 @@ import java.util.Objects;
  */
 public class PinpointLocalizer extends Localizer {
     private HardwareMap hardwareMap;
-    private GoBildaPinpointDriver odo;
+    private final GoBildaPinpointDriver odo;
     private double previousHeading;
     private double totalHeading;
     private Pose startPose;
@@ -99,11 +99,8 @@ public class PinpointLocalizer extends Localizer {
         setStartPose(setStartPose);
         totalHeading = 0;
         timer = new NanoTimer();
-        pinpointPose = startPose;
         currentVelocity = new Pose();
         deltaTimeNano = 1;
-        previousHeading = setStartPose.getHeading();
-
     }
 
     /**
@@ -164,6 +161,7 @@ public class PinpointLocalizer extends Localizer {
     public void setPose(Pose setPose) {
         odo.setPosition(new Pose2D(DistanceUnit.INCH, setPose.getX(), setPose.getY(), AngleUnit.RADIANS, setPose.getHeading()));
         pinpointPose = setPose;
+        previousHeading = setPose.getHeading();
     }
 
     /**
