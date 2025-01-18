@@ -478,7 +478,7 @@ public class Follower {
      * @param pathChain the PathChain to follow.
      */
     public void followPath(PathChain pathChain, boolean holdEnd) {
-        followPath(pathChain, holdEnd);
+        followPath(pathChain, globalMaxPower, holdEnd);
     }
 
     /**
