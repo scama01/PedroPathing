@@ -28,6 +28,18 @@ tasks.named<org.jetbrains.dokka.gradle.DokkaTask>("dokkaJavadoc") {
 	}
 }
 
+tasks.dokkaHtml {
+	dokkaSourceSets {
+		named("main") {
+			perPackageOption {
+				matchingRegex.set("com\\.acmerobotics\\.roadrunner\\.ftc.*")
+				suppress.set(true) // Exclude this package
+			}
+		}
+	}
+}
+
+
 val defaultMinSdkVersion by extra(29)
 val defaultMinSdkVersion1 by extra(23)
 
