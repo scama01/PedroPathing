@@ -52,7 +52,8 @@ import java.util.Objects;
  */
 public class PinpointLocalizer extends Localizer {
     private HardwareMap hardwareMap;
-    private final GoBildaPinpointDriver odo;
+    private GoBildaPinpointDriver odo;
+    private double previousHeading;
     private double totalHeading;
     private Pose startPose;
     private long deltaTimeNano;
@@ -98,8 +99,11 @@ public class PinpointLocalizer extends Localizer {
         setStartPose(setStartPose);
         totalHeading = 0;
         timer = new NanoTimer();
+        pinpointPose = startPose;
         currentVelocity = new Pose();
         deltaTimeNano = 1;
+        previousHeading = setStartPose.getHeading();
+
     }
 
     /**
@@ -172,7 +176,8 @@ public class PinpointLocalizer extends Localizer {
         odo.update();
         Pose2D pinpointPose2D = odo.getPosition();
         Pose currentPinpointPose = new Pose(pinpointPose2D.getX(DistanceUnit.INCH), pinpointPose2D.getY(DistanceUnit.INCH), pinpointPose2D.getHeading(AngleUnit.RADIANS));
-        totalHeading += MathFunctions.getSmallestAngleDifference(currentPinpointPose.getHeading(), pinpointPose.getHeading());
+        totalHeading += MathFunctions.getSmallestAngleDifference(currentPinpointPose.getHeading(), previousHeading);
+        previousHeading = currentPinpointPose.getHeading();
         Pose deltaPose = MathFunctions.subtractPoses(currentPinpointPose, pinpointPose);
         currentVelocity = new Pose(deltaPose.getX() / (deltaTimeNano / Math.pow(10.0, 9)), deltaPose.getY() / (deltaTimeNano / Math.pow(10.0, 9)), deltaPose.getHeading() / (deltaTimeNano / Math.pow(10.0, 9)));
         pinpointPose = currentPinpointPose;

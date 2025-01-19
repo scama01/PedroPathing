@@ -490,7 +490,7 @@ public class Follower {
         followPath(pathChain, false);
     }
 
-    private void followPath(PathChain pathChain, double maxPower, boolean holdEnd) {
+    public void followPath(PathChain pathChain, double maxPower, boolean holdEnd) {
         driveVectorScaler.setMaxPowerScaling(maxPower);
         breakFollowing();
         holdPositionAtEnd = holdEnd;
