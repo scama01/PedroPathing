@@ -36,6 +36,9 @@ jobs:
         run: |
           rm -rf target-repo/public/reference
 
+      - name: Debug Dokka Output
+        run: ls -R build/dokka
+
       - name: Copy documentation to target repository
         run: |
           mkdir -p target-repo/public/reference
