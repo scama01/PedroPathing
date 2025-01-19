@@ -41,7 +41,7 @@ jobs:
 
       - name: Copy documentation to target repository
         run: |
-          mkdir -p target-repo/public/reference
+          mkdir -p target-repo/public/java
           cp -r build/dokka/html/* target-repo/public/java/
     
 
