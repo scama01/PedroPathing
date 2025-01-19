@@ -733,6 +733,7 @@ public class Follower {
      */
     public void breakFollowing() {
         teleopDrive = false;
+        setMotorsToFloat();
         holdingPosition = false;
         isBusy = false;
         reachedParametricPathEnd = false;
