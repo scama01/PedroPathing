@@ -28,7 +28,7 @@ jobs:
       - name: Checkout docs repository
         uses: actions/checkout@v4
         with:
-          repository: rowan-mcalpin/NextFTC-Docs
+          repository: baronclaps/Documentation
           token: ${{ secrets.DOCS_REPO_TOKEN }}
           path: target-repo
 
