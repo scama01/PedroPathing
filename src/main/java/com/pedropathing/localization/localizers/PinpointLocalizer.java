@@ -175,8 +175,7 @@ public class PinpointLocalizer extends Localizer {
         deltaTimeNano = timer.getElapsedTime();
         timer.resetTimer();
         odo.update();
-        Pose2D pinpointPose2D = odo.getPosition();
-        Pose currentPinpointPose = new Pose(pinpointPose2D.getX(DistanceUnit.INCH), pinpointPose2D.getY(DistanceUnit.INCH), pinpointPose2D.getHeading(AngleUnit.RADIANS));
+        Pose currentPinpointPose = getPoseEstimate(odo.getPosition(), pinpointPose);
         totalHeading += MathFunctions.getSmallestAngleDifference(currentPinpointPose.getHeading(), previousHeading);
         previousHeading = currentPinpointPose.getHeading();
         Pose deltaPose = MathFunctions.subtractPoses(currentPinpointPose, pinpointPose);
@@ -257,5 +256,19 @@ public class PinpointLocalizer extends Localizer {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Pose getPoseEstimate(Pose2D pinpointEstimate, Pose currentPose) {
+        if (Double.isNaN(pinpointEstimate.getX(DistanceUnit.INCH)) || Double.isNaN(pinpointEstimate.getY(DistanceUnit.INCH)) || Double.isNaN(pinpointEstimate.getHeading(AngleUnit.RADIANS))) {
+            return currentPose;
+        }
+
+        Pose estimate = new Pose(pinpointEstimate.getX(DistanceUnit.INCH), pinpointEstimate.getY(DistanceUnit.INCH), pinpointEstimate.getHeading(AngleUnit.RADIANS));
+
+        if (estimate.roughlyEquals(new Pose(), 0.002)) {
+            return currentPose;
+        }
+
+        return estimate;
     }
 }
