@@ -83,7 +83,7 @@ publishing {
 	publications {
 		register<MavenPublication>("release") {
 			groupId = "com.pedropathing"
-			artifactId = "dev"
+			artifactId = "beta"
 			version = "1.0.7-beta3"
 
 			afterEvaluate {
