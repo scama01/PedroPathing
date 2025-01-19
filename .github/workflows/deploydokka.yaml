@@ -28,7 +28,7 @@ jobs:
       - name: Checkout docs repository
         uses: actions/checkout@v4
         with:
-          repository: baronclaps/Documentation
+          repository: Pedro-Pathing/Documentation
           token: ${{ secrets.DOCS_REPO_TOKEN }}
           path: target-repo
 
