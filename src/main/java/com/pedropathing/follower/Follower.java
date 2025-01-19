@@ -841,12 +841,26 @@ public class Follower {
         Vector forwardHeadingVector = new Vector(1.0, poseUpdater.getPose().getHeading());
         double forwardVelocity = MathFunctions.dotProduct(forwardHeadingVector, velocity);
         double forwardDistanceToGoal = MathFunctions.dotProduct(forwardHeadingVector, distanceToGoalVector);
+
+        if(forwardDistanceToGoal < 0 ) {
+            if(forwardZeroPowerAcceleration < 0 ) forwardZeroPowerAcceleration *= -1;
+        } else if (forwardDistanceToGoal > 0) {
+            if(forwardZeroPowerAcceleration > 0 ) forwardZeroPowerAcceleration *= -1;
+        }
+
         double forwardVelocityGoal = MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * forwardZeroPowerAcceleration * forwardDistanceToGoal));
         double forwardVelocityZeroPowerDecay = forwardVelocity - MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(forwardVelocity, 2) + 2 * forwardZeroPowerAcceleration * forwardDistanceToGoal));
 
         Vector lateralHeadingVector = new Vector(1.0, poseUpdater.getPose().getHeading() - Math.PI / 2);
         double lateralVelocity = MathFunctions.dotProduct(lateralHeadingVector, velocity);
         double lateralDistanceToGoal = MathFunctions.dotProduct(lateralHeadingVector, distanceToGoalVector);
+
+        if(lateralDistanceToGoal < 0 ) {
+            if(lateralZeroPowerAcceleration < 0 ) lateralZeroPowerAcceleration *= -1;
+        } else if (lateralDistanceToGoal > 0) {
+            if(lateralZeroPowerAcceleration > 0 ) lateralZeroPowerAcceleration *= -1;
+        }
+
         double lateralVelocityGoal = MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * lateralZeroPowerAcceleration * lateralDistanceToGoal));
         double lateralVelocityZeroPowerDecay = lateralVelocity - MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(lateralVelocity, 2) + 2 * lateralZeroPowerAcceleration * lateralDistanceToGoal));
 
@@ -868,7 +882,6 @@ public class Follower {
 
         return driveKalmanFilter.getState();
     }
-
     /**
      * This returns a Vector in the direction of the robot that contains the heading correction
      * as its magnitude. Positive heading correction turns the robot counter-clockwise, and negative
