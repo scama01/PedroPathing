@@ -60,6 +60,7 @@ public class PinpointLocalizer extends Localizer {
     private NanoTimer timer;
     private Pose currentVelocity;
     private Pose pinpointPose;
+    private boolean pinpointCooked = false;
 
     /**
      * This creates a new PinpointLocalizer from a HardwareMap, with a starting Pose at (0,0)
@@ -237,12 +238,6 @@ public class PinpointLocalizer extends Localizer {
     @Override
     public void resetIMU() throws InterruptedException {
         odo.recalibrateIMU();
-
-        try {
-            Thread.sleep(300);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
@@ -260,15 +255,23 @@ public class PinpointLocalizer extends Localizer {
 
     private Pose getPoseEstimate(Pose2D pinpointEstimate, Pose currentPose) {
         if (Double.isNaN(pinpointEstimate.getX(DistanceUnit.INCH)) || Double.isNaN(pinpointEstimate.getY(DistanceUnit.INCH)) || Double.isNaN(pinpointEstimate.getHeading(AngleUnit.RADIANS))) {
+            pinpointCooked = true;
             return currentPose;
         }
 
         Pose estimate = new Pose(pinpointEstimate.getX(DistanceUnit.INCH), pinpointEstimate.getY(DistanceUnit.INCH), pinpointEstimate.getHeading(AngleUnit.RADIANS));
 
         if (estimate.roughlyEquals(new Pose(), 0.002)) {
+            pinpointCooked = true;
             return currentPose;
         }
 
+        pinpointCooked = false;
         return estimate;
+    }
+
+    @Override
+    public boolean isPinpointCooked() {
+        return pinpointCooked;
     }
 }
