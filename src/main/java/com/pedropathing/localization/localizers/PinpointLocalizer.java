@@ -274,4 +274,9 @@ public class PinpointLocalizer extends Localizer {
     public boolean isPinpointCooked() {
         return pinpointCooked;
     }
+
+    @Override
+    public void setPinpointIsCooked(boolean cooked) {
+        this.pinpointCooked = cooked;
+    }
 }

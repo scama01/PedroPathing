@@ -104,4 +104,6 @@ public abstract class Localizer {
     }
 
     public boolean isPinpointCooked() {return false;}
+
+    public void setPinpointIsCooked(boolean cooked) {}
 }

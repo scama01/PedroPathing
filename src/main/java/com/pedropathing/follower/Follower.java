@@ -546,6 +546,7 @@ public class Follower {
         if (pinpointRecalibrationTimer != null && pinpointRecalibrationTimer.milliseconds() > 150) {
             resumePathFollowing();
             pinpointRecalibrationTimer = null;
+            poseUpdater.getLocalizer().setPinpointIsCooked(false);
         } if (!poseUpdater.getLocalizer().isPinpointCooked()) {
             if (!teleopDrive) {
                 if (currentPath != null) {
@@ -1203,4 +1204,7 @@ public class Follower {
         }
     }
 
+    public boolean isPinpointCooked() {
+        return poseUpdater.getLocalizer().isPinpointCooked();
+    }
 }
