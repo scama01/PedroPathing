@@ -176,7 +176,7 @@ public class PinpointLocalizer extends Localizer {
         deltaTimeNano = timer.getElapsedTime();
         timer.resetTimer();
         odo.update();
-        Pose currentPinpointPose = getPoseEstimate(odo.getPosition(), pinpointPose);
+        Pose currentPinpointPose = getPoseEstimate(odo.getPosition(), pinpointPose, deltaTimeNano);
         totalHeading += MathFunctions.getSmallestAngleDifference(currentPinpointPose.getHeading(), previousHeading);
         previousHeading = currentPinpointPose.getHeading();
         Pose deltaPose = MathFunctions.subtractPoses(currentPinpointPose, pinpointPose);
@@ -253,17 +253,17 @@ public class PinpointLocalizer extends Localizer {
         }
     }
 
-    private Pose getPoseEstimate(Pose2D pinpointEstimate, Pose currentPose) {
+    private Pose getPoseEstimate(Pose2D pinpointEstimate, Pose currentPose, long deltaTime) {
         if (Double.isNaN(pinpointEstimate.getX(DistanceUnit.INCH)) || Double.isNaN(pinpointEstimate.getY(DistanceUnit.INCH)) || Double.isNaN(pinpointEstimate.getHeading(AngleUnit.RADIANS))) {
             pinpointCooked = true;
-            return currentPose;
+            return MathFunctions.addPoses(currentPose, new Pose(currentVelocity.getX() * deltaTime / Math.pow(10, 9), currentVelocity.getY() * deltaTime / Math.pow(10, 9), currentVelocity.getHeading() * deltaTime / Math.pow(10, 9)));
         }
 
         Pose estimate = new Pose(pinpointEstimate.getX(DistanceUnit.INCH), pinpointEstimate.getY(DistanceUnit.INCH), pinpointEstimate.getHeading(AngleUnit.RADIANS));
 
         if (estimate.roughlyEquals(new Pose(), 0.002)) {
             pinpointCooked = true;
-            return currentPose;
+            return MathFunctions.addPoses(currentPose, new Pose(currentVelocity.getX() * deltaTime / Math.pow(10, 9), currentVelocity.getY() * deltaTime / Math.pow(10, 9), currentVelocity.getHeading() * deltaTime / Math.pow(10, 9)));
         }
 
         pinpointCooked = false;
@@ -273,10 +273,5 @@ public class PinpointLocalizer extends Localizer {
     @Override
     public boolean isPinpointCooked() {
         return pinpointCooked;
-    }
-
-    @Override
-    public void setPinpointIsCooked(boolean cooked) {
-        this.pinpointCooked = cooked;
     }
 }
