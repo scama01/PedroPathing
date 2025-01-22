@@ -1,3 +1,4 @@
+
 package com.pedropathing.follower;
 
 import static com.pedropathing.follower.FollowerConstants.drivePIDFFeedForward;
@@ -455,7 +456,6 @@ public class Follower {
      * @param path the Path to follow.
      */
     public void followPath(Path path, boolean holdEnd) {
-        driveVectorScaler.setMaxPowerScaling(globalMaxPower);
         breakFollowing();
         holdPositionAtEnd = holdEnd;
         isBusy = true;
@@ -581,10 +581,8 @@ public class Follower {
                         debugLog();
                     }
 
-                    if (currentPath.isAtParametricEnd() ||
-                            (zeroVelocityDetectedTimer != null && zeroVelocityDetectedTimer.milliseconds() > 500.0)) {
+                    if (currentPath.isAtParametricEnd()) {
                         if (followingPathChain && chainIndex < currentPathChain.size() - 1) {
-
                             if (logDebug) {
                                 Log.d("Follower_logger", "chainIndex: " + chainIndex + " | Pose: " + getPose());
                             }
@@ -604,10 +602,7 @@ public class Follower {
                                 reachedParametricPathEndTime = System.currentTimeMillis();
                             }
 
-                            if ((System.currentTimeMillis() - reachedParametricPathEndTime > currentPath.getPathEndTimeoutConstraint()) ||
-                                    (poseUpdater.getVelocity().getMagnitude() < currentPath.getPathEndVelocityConstraint()
-                                            && MathFunctions.distance(poseUpdater.getPose(), closestPose) < currentPath.getPathEndTranslationalConstraint() &&
-                                            MathFunctions.getSmallestAngleDifference(poseUpdater.getPose().getHeading(), currentPath.getClosestPointHeadingGoal()) < currentPath.getPathEndHeadingConstraint())) {
+                            if ((System.currentTimeMillis() - reachedParametricPathEndTime > currentPath.getPathEndTimeoutConstraint()) || (poseUpdater.getVelocity().getMagnitude() < currentPath.getPathEndVelocityConstraint() && MathFunctions.distance(poseUpdater.getPose(), closestPose) < currentPath.getPathEndTranslationalConstraint() && MathFunctions.getSmallestAngleDifference(poseUpdater.getPose().getHeading(), currentPath.getClosestPointHeadingGoal()) < currentPath.getPathEndHeadingConstraint())) {
                                 if (holdPositionAtEnd) {
                                     holdPositionAtEnd = false;
                                     holdPoint(new BezierPoint(currentPath.getLastControlPoint()), currentPath.getHeadingGoal(1));
@@ -629,7 +624,6 @@ public class Follower {
                             }
                         }
                     }
-                    //RobotLog.d("Follower:: isBusy:" + isBusy);
                 }
             }
         } else {
@@ -850,15 +844,15 @@ public class Follower {
         double forwardVelocity = MathFunctions.dotProduct(forwardHeadingVector, velocity);
         double forwardDistanceToGoal = MathFunctions.dotProduct(forwardHeadingVector, distanceToGoalVector);
 
-        double forwardVelocityGoal = MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * forwardZeroPowerAcceleration * (forwardDistanceToGoal <= 0 ? 1 : -1) * forwardDistanceToGoal));
-        double forwardVelocityZeroPowerDecay = forwardVelocity - MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(forwardVelocity, 2) + 2 * forwardZeroPowerAcceleration * forwardDistanceToGoal));
+        // Thank you Pear for the bug report on this not reversing
+        double forwardVelocityGoal = MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * forwardZeroPowerAcceleration * (forwardVelocity < 0 ? -1 : 1) * forwardDistanceToGoal));
+        double forwardVelocityZeroPowerDecay = forwardVelocity - MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(forwardVelocity, 2) + 2 * forwardZeroPowerAcceleration * (forwardVelocity < 0 ? -1 : 1) * forwardDistanceToGoal));
 
         Vector lateralHeadingVector = new Vector(1.0, poseUpdater.getPose().getHeading() - Math.PI / 2);
         double lateralVelocity = MathFunctions.dotProduct(lateralHeadingVector, velocity);
         double lateralDistanceToGoal = MathFunctions.dotProduct(lateralHeadingVector, distanceToGoalVector);
-
-        double lateralVelocityGoal = MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * lateralZeroPowerAcceleration * (lateralDistanceToGoal <= 0 ? 1 : -1) * lateralDistanceToGoal));
-        double lateralVelocityZeroPowerDecay = lateralVelocity - MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(lateralVelocity, 2) + 2 * lateralZeroPowerAcceleration * lateralDistanceToGoal));
+        double lateralVelocityGoal = MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * lateralZeroPowerAcceleration * (lateralVelocity < 0 ? -1 : 1) * lateralDistanceToGoal));
+        double lateralVelocityZeroPowerDecay = lateralVelocity - MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(lateralVelocity, 2) + 2 * lateralZeroPowerAcceleration * (lateralVelocity < 0 ? -1 : 1) * lateralDistanceToGoal));
 
         Vector forwardVelocityError = new Vector(forwardVelocityGoal - forwardVelocityZeroPowerDecay - forwardVelocity, forwardHeadingVector.getTheta());
         Vector lateralVelocityError = new Vector(lateralVelocityGoal - lateralVelocityZeroPowerDecay - lateralVelocity, lateralHeadingVector.getTheta());
@@ -878,6 +872,7 @@ public class Follower {
 
         return driveKalmanFilter.getState();
     }
+
     /**
      * This returns a Vector in the direction of the robot that contains the heading correction
      * as its magnitude. Positive heading correction turns the robot counter-clockwise, and negative
@@ -892,11 +887,6 @@ public class Follower {
         if (!useHeading) return new Vector();
         headingError = MathFunctions.getTurnDirection(poseUpdater.getPose().getHeading(), currentPath.getClosestPointHeadingGoal()) * MathFunctions.getSmallestAngleDifference(poseUpdater.getPose().getHeading(), currentPath.getClosestPointHeadingGoal());
         if (Math.abs(headingError) < headingPIDFSwitch && useSecondaryHeadingPID) {
-//            if(logDebug) {
-//                Log.d("Follower_logger", "using secondary heading PIDF controller, error: "
-//                        + String.format("%3.3f", Math.toDegrees(headingError)));
-//
-//            }
             secondaryHeadingPIDF.updateError(headingError);
             headingVector = new Vector(MathFunctions.clamp(secondaryHeadingPIDF.runPIDF() + secondaryHeadingPIDFFeedForward * MathFunctions.getTurnDirection(poseUpdater.getPose().getHeading(), currentPath.getClosestPointHeadingGoal()), -driveVectorScaler.getMaxPowerScaling(), driveVectorScaler.getMaxPowerScaling()), poseUpdater.getPose().getHeading());
             return MathFunctions.copyVector(headingVector);
@@ -1114,7 +1104,7 @@ public class Follower {
     }
 
     /**
-     * This returns the total number of radians the robot has turned.
+     * This returns the total number of radians the robot has turned. This is calculated by the PoseUpdater.
      *
      * @return the total heading.
      */
