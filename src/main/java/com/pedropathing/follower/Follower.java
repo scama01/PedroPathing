@@ -470,7 +470,7 @@ public class Follower {
      * @param path the Path to follow.
      */
     public void followPath(Path path) {
-        followPath(path, false);
+        followPath(path, true);
     }
 
     /**
@@ -489,7 +489,7 @@ public class Follower {
      * @param pathChain the PathChain to follow.
      */
     public void followPath(PathChain pathChain) {
-        followPath(pathChain, false);
+        followPath(pathChain, true);
     }
 
     public void followPath(PathChain pathChain, double maxPower, boolean holdEnd) {
