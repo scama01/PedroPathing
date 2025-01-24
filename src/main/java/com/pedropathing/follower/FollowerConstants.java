@@ -322,6 +322,7 @@ public class FollowerConstants {
      *  Default Value: false */
     public static boolean useBrakeModeInTeleOp = false;
 
-    /** A Value solely used to debug the constantsUser */
-    public static double constantsDebug = 0;
+    /** Boolean that determines if holdEnd is automatically (when not defined in the constructor) enabled at the end of a path.
+     *  Default Value: true */
+    public static boolean automaticHoldEnd = true;
 }

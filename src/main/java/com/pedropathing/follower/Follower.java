@@ -1,6 +1,7 @@
 
 package com.pedropathing.follower;
 
+import static com.pedropathing.follower.FollowerConstants.automaticHoldEnd;
 import static com.pedropathing.follower.FollowerConstants.drivePIDFFeedForward;
 import static com.pedropathing.follower.FollowerConstants.drivePIDFSwitch;
 import static com.pedropathing.follower.FollowerConstants.forwardZeroPowerAcceleration;
@@ -454,6 +455,7 @@ public class Follower {
      * This also makes the Follower hold the last Point on the Path.
      *
      * @param path the Path to follow.
+     * @param holdEnd this makes the Follower hold the last Point on the Path.
      */
     public void followPath(Path path, boolean holdEnd) {
         breakFollowing();
@@ -470,7 +472,7 @@ public class Follower {
      * @param path the Path to follow.
      */
     public void followPath(Path path) {
-        followPath(path, true);
+        followPath(path, automaticHoldEnd);
     }
 
     /**
@@ -478,6 +480,7 @@ public class Follower {
      * This also makes the Follower hold the last Point on the PathChain.
      *
      * @param pathChain the PathChain to follow.
+     * @param holdEnd this makes the Follower hold the last Point on the PathChain.
      */
     public void followPath(PathChain pathChain, boolean holdEnd) {
         followPath(pathChain, globalMaxPower, holdEnd);
@@ -489,9 +492,17 @@ public class Follower {
      * @param pathChain the PathChain to follow.
      */
     public void followPath(PathChain pathChain) {
-        followPath(pathChain, true);
+        followPath(pathChain, automaticHoldEnd);
     }
 
+    /**
+     * This follows a PathChain. Drive vector projection is only done on the last Path.
+     * This also makes the Follower hold the last Point on the PathChain.
+     *
+     * @param pathChain the PathChain to follow.
+     * @param maxPower the max power of the Follower for this path
+     * @param holdEnd this makes the Follower hold the last Point on the PathChain.
+     */
     public void followPath(PathChain pathChain, double maxPower, boolean holdEnd) {
         driveVectorScaler.setMaxPowerScaling(maxPower);
         breakFollowing();
@@ -506,6 +517,9 @@ public class Follower {
         closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
     }
 
+    /**
+     * Resumes pathing
+     */
     public void resumePathFollowing() {
         pathStartTimes = new long[currentPathChain.size()];
         pathStartTimes[0] = System.currentTimeMillis();
