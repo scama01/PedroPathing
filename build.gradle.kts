@@ -74,11 +74,11 @@ android {
 }
 
 dependencies {
-	compileOnly("org.firstinspires.ftc:RobotCore:10.1.1")
-	compileOnly("org.firstinspires.ftc:Hardware:10.1.1")
-	compileOnly("org.firstinspires.ftc:FtcCommon:10.1.1")
-	compileOnly("org.firstinspires.ftc:RobotServer:10.1.1")
-	compileOnly("org.firstinspires.ftc:OnBotJava:10.1.1")
+	compileOnly("org.firstinspires.ftc:RobotCore:10.2.0")
+	compileOnly("org.firstinspires.ftc:Hardware:10.2.0")
+	compileOnly("org.firstinspires.ftc:FtcCommon:10.2.0")
+	compileOnly("org.firstinspires.ftc:RobotServer:10.2.0")
+	compileOnly("org.firstinspires.ftc:OnBotJava:10.2.0")
 
 
 
@@ -92,14 +92,13 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.20")
 }
 
-
 // CONFIGURE PUBLICATION
 publishing {
 	publications {
 		register<MavenPublication>("release") {
 			groupId = "com.pedropathing"
 			artifactId = "pedro"
-			version = "1.0.6"
+			version = "1.0.7"
 
 			afterEvaluate {
 				from(components["release"])
