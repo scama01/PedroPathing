@@ -3,6 +3,8 @@ package com.pedropathing.pathgen;
 import com.pedropathing.localization.Pose;
 import com.pedropathing.follower.FollowerConstants;
 
+import org.apache.commons.math3.util.MathUtils;
+
 import java.util.ArrayList;
 
 /**
@@ -16,12 +18,12 @@ import java.util.ArrayList;
  * @version 1.0, 3/10/2024
  */
 public class Path {
-    private BezierCurve curve;
+    private final BezierCurve curve;
 
     private double startHeading;
     private double endHeading;
     private double closestPointCurvature;
-    private double closestPointTValue;
+    private double closestPointTValue = 0;
     private double linearInterpolationEndTime;
 
     private Vector closestPointTangentVector;
@@ -128,34 +130,33 @@ public class Path {
      * that is limited to some specified step limit.
      *
      * @param pose the pose.
-     * @param searchStepLimit the binary search step limit.
+     * @param searchLimit the maximum number of iterations to run.
      * @return returns the closest Point.
      */
-    public Pose getClosestPoint(Pose pose, int searchStepLimit) {
-        double lower = 0;
-        double upper = 1;
-        Point returnPoint;
+    public Pose getClosestPoint(Pose pose, int searchLimit) {
+        for (int i = 0; i < searchLimit; i++) {
+            Point lastPoint = curve.getPoint(closestPointTValue);
+            Point posePoint = new Point(pose);
 
-        // we don't need to calculate the midpoint, so we start off at the 1/4 and 3/4 point
-        for (int i = 0; i < searchStepLimit; i++) {
-            if (MathFunctions.distance(pose, getPoint(lower + 0.25 * (upper-lower))) > MathFunctions.distance(pose, getPoint(lower + 0.75 * (upper-lower)))) {
-                lower += (upper-lower)/2.0;
-            } else {
-                upper -= (upper-lower)/2.0;
-            }
+            Vector differenceVector = new Vector(MathFunctions.subtractPoints(lastPoint, posePoint));
+
+            double firstDerivative = 2 * MathFunctions.dotProduct(curve.getDerivative(closestPointTValue), differenceVector);
+            double secondDerivative = 2 * (Math.pow(curve.getDerivative(closestPointTValue).getMagnitude(), 2) +
+                    MathFunctions.dotProduct(differenceVector, curve.getSecondDerivative(closestPointTValue)));
+
+            double adjustment = firstDerivative / secondDerivative;
+            closestPointTValue = MathFunctions.clamp(closestPointTValue - adjustment, 0, 1);
+
+            if (adjustment < 1e-3)
+                break;
         }
 
-        closestPointTValue = lower + 0.5 * (upper-lower);
-
-        returnPoint = getPoint(closestPointTValue);
-
+        Point closestPoint = curve.getPoint(closestPointTValue);
         closestPointTangentVector = curve.getDerivative(closestPointTValue);
-
         closestPointNormalVector = curve.getApproxSecondDerivative(closestPointTValue);
-
         closestPointCurvature = curve.getCurvature(closestPointTValue);
 
-        return new Pose(returnPoint.getX(), returnPoint.getY(), getClosestPointHeadingGoal());
+        return new Pose(closestPoint.getX(), closestPoint.getY(), getClosestPointHeadingGoal());
     }
 
     /**
