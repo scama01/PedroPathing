@@ -9,7 +9,6 @@ import static com.pedropathing.follower.FollowerConstants.headingPIDFSwitch;
 import static com.pedropathing.follower.FollowerConstants.lateralZeroPowerAcceleration;
 import static com.pedropathing.follower.FollowerConstants.leftFrontMotorName;
 import static com.pedropathing.follower.FollowerConstants.leftRearMotorName;
-import static com.pedropathing.follower.FollowerConstants.localizers;
 import static com.pedropathing.follower.FollowerConstants.rightFrontMotorName;
 import static com.pedropathing.follower.FollowerConstants.rightRearMotorName;
 import static com.pedropathing.follower.FollowerConstants.leftFrontMotorDirection;
@@ -31,7 +30,6 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 
@@ -88,7 +86,7 @@ public class Follower {
 
     private PathChain currentPathChain;
 
-    private final int BEZIER_CURVE_BINARY_STEP_LIMIT = FollowerConstants.BEZIER_CURVE_BINARY_STEP_LIMIT;
+    private final int BEZIER_CURVE_SEARCH_LIMIT = FollowerConstants.BEZIER_CURVE_SEARCH_LIMIT;
     private final int AVERAGED_VELOCITY_SAMPLE_NUMBER = FollowerConstants.AVERAGED_VELOCITY_SAMPLE_NUMBER;
 
     private int chainIndex;
@@ -463,7 +461,7 @@ public class Follower {
         isBusy = true;
         followingPathChain = false;
         currentPath = path;
-        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
     }
 
     /**
@@ -514,7 +512,7 @@ public class Follower {
         chainIndex = 0;
         currentPathChain = pathChain;
         currentPath = pathChain.getPath(chainIndex);
-        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
     }
 
     /**
@@ -524,7 +522,7 @@ public class Follower {
         pathStartTimes = new long[currentPathChain.size()];
         pathStartTimes[0] = System.currentTimeMillis();
         isBusy = true;
-        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
     }
 
     /**
@@ -571,7 +569,7 @@ public class Follower {
                     }
                 } else {
                     if (isBusy) {
-                        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+                        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
 
                         if (followingPathChain) updateCallbacks();
 
@@ -609,7 +607,7 @@ public class Follower {
                             followingPathChain = true;
                             chainIndex++;
                             currentPath = currentPathChain.getPath(chainIndex);
-                            closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+                            closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
                         } else {
                             // At last path, run some end detection stuff
                             // set isBusy to false if at end

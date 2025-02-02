@@ -207,7 +207,7 @@ public class FollowerConstants {
     public static double pathEndTimeoutConstraint = 500;
 
     /** This is how many steps the BezierCurve class uses to approximate the length of a BezierCurve.
-     * @see #BEZIER_CURVE_BINARY_STEP_LIMIT
+     * @see #BEZIER_CURVE_SEARCH_LIMIT
      *  Default Value: 1000 */
     public static int APPROXIMATION_STEPS = 1000;
 
@@ -226,12 +226,11 @@ public class FollowerConstants {
      *  Default Value: 8 */
     public static int AVERAGED_VELOCITY_SAMPLE_NUMBER = 8;
 
-    /** This is the number of steps the binary search for closest point uses. More steps is more
-     * accuracy, and this increases at an exponential rate. However, more steps also does take more
-     * time.
+    /** This is the number of steps the search for the closest point uses. More steps lead to bigger
+     * accuracy. However, more steps also take more time.
      * @see #APPROXIMATION_STEPS
      *  Default Value: 10 */
-    public static int BEZIER_CURVE_BINARY_STEP_LIMIT = 10;
+    public static int BEZIER_CURVE_SEARCH_LIMIT = 10;
 
     /** This activates/deactivates the secondary translational PIDF. It takes over at a certain translational error
      * @see #translationalPIDFSwitch
@@ -318,7 +317,7 @@ public class FollowerConstants {
      *  Default Value: 0.01 */
     public static double secondaryDrivePIDFFeedForward = 0.01;
 
-    /** Use break mode for the drive motors in teleop
+    /** Use brake mode for the drive motors in teleop
      *  Default Value: false */
     public static boolean useBrakeModeInTeleOp = false;
 
