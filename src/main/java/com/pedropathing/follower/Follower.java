@@ -159,8 +159,6 @@ public class Follower {
      * Credit to team 14343 Escape Velocity for the voltage code
      * Credit to team 23511 Seattle Solvers for implementing the voltage code into Follower.java
      */
-
-    private static int voltageIndex = 0;
     private boolean cached = false;
 
     private VoltageSensor voltageSensor;
@@ -170,7 +168,6 @@ public class Follower {
     private boolean logDebug = true;
 
     private ElapsedTime zeroVelocityDetectedTimer;
-    private ElapsedTime pinpointRecalibrationTimer;
 
     /**
      * This creates a new Follower given a HardwareMap.
@@ -201,7 +198,7 @@ public class Follower {
         poseUpdater = new PoseUpdater(hardwareMap);
         driveVectorScaler = new DriveVectorScaler(FollowerConstants.frontLeftVector);
 
-        voltageSensor = hardwareMap.getAll(VoltageSensor.class).get(voltageIndex);
+        voltageSensor = hardwareMap.voltageSensor.iterator().next();
         voltageTimer.reset();
 
         leftFront = hardwareMap.get(DcMotorEx.class, leftFrontMotorName);
@@ -1238,28 +1235,28 @@ public class Follower {
      */
     public double getVoltage() {
         if (voltageTimer.seconds() > cacheInvalidateSeconds && cacheInvalidateSeconds >= 0) {
-            clearCache();
+            cached = false;
         }
 
-        if (!cached) {
-            cached = true;
-            return voltage = voltageSensor.getVoltage();
-        } else {
-            return voltage;
-        }
+        if (!cached)
+            refreshVoltage();
+
+        return voltage;
     }
 
     /**
      * @return A scalar that normalizes power outputs to the nominal voltage from the current voltage.
      */
     public double getVoltageNormalized() {
-        return nominalVoltage / getVoltage();
+        return Math.min(nominalVoltage / getVoltage(), 1);
     }
 
     /**
-     * Forcibly invalidates the cache.
+     * Overrides the voltage cooldown.
      */
-    private void clearCache() {
-        cached = false;
+    public void refreshVoltage() {
+        cached = true;
+        voltage = voltageSensor.getVoltage();
+        voltageTimer.reset();
     }
 }
