@@ -325,11 +325,15 @@ public class FollowerConstants {
      *  Default Value: true */
     public static boolean automaticHoldEnd = true;
 
-    /** Use voltage compensation to linearly scale motor powers
+    /** Use voltage compensation to linearly scale motor powers in Auto
      *  Requires fully re-tuning if you set it to true
      *  Default Value: false */
-    public static boolean useVoltageCompensationInAuto = false;   // Use voltage compensation for Autonomous paths
-    public static boolean useVoltageCompensationInTeleOp = false; // Use voltage compensation for TeleOp drive control
+    public static boolean useVoltageCompensationInAuto = false;
+
+    /** Use voltage compensation to linearly scale motor powers in TeleOp
+     *  Requires fully re-tuning if you set it to true
+     *  Default Value: false */
+    public static boolean useVoltageCompensationInTeleOp = false;
 
     /** The voltage to scale to (the voltage that you tuned at)
      *  If the robot's voltage is at the default value, it will not affect the motor powers.
