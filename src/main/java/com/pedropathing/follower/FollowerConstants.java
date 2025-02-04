@@ -324,4 +324,21 @@ public class FollowerConstants {
     /** Boolean that determines if holdEnd is automatically (when not defined in the constructor) enabled at the end of a path.
      *  Default Value: true */
     public static boolean automaticHoldEnd = true;
+
+    /** Use voltage compensation to linearly scale motor powers
+     *  Requires fully re-tuning if you set it to true
+     *  Default Value: false */
+    public static boolean useVoltageCompensationInAuto = false;   // Use voltage compensation for Autonomous paths
+    public static boolean useVoltageCompensationInTeleOp = false; // Use voltage compensation for TeleOp drive control
+
+    /** The voltage to scale to (the voltage that you tuned at)
+     *  If the robot's voltage is at the default value, it will not affect the motor powers.
+     * Will only read voltage if useVoltageCompensation is true.
+     *  Default Value: 12.0 */
+    public static double nominalVoltage = 12.0;
+
+    /** Time (in seconds) before reading voltage again
+     *  Will only read voltage if useVoltageCompensation is true.
+     *  Default Value: 0.5 */
+    public static double cacheInvalidateSeconds = 0.5;
 }
