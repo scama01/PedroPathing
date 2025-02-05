@@ -1,6 +1,7 @@
 package com.pedropathing.follower;
 
 import static com.pedropathing.follower.FollowerConstants.automaticHoldEnd;
+import static com.pedropathing.follower.FollowerConstants.cacheInvalidateSeconds;
 import static com.pedropathing.follower.FollowerConstants.drivePIDFFeedForward;
 import static com.pedropathing.follower.FollowerConstants.drivePIDFSwitch;
 import static com.pedropathing.follower.FollowerConstants.forwardZeroPowerAcceleration;
@@ -9,7 +10,7 @@ import static com.pedropathing.follower.FollowerConstants.headingPIDFSwitch;
 import static com.pedropathing.follower.FollowerConstants.lateralZeroPowerAcceleration;
 import static com.pedropathing.follower.FollowerConstants.leftFrontMotorName;
 import static com.pedropathing.follower.FollowerConstants.leftRearMotorName;
-import static com.pedropathing.follower.FollowerConstants.localizers;
+import static com.pedropathing.follower.FollowerConstants.nominalVoltage;
 import static com.pedropathing.follower.FollowerConstants.rightFrontMotorName;
 import static com.pedropathing.follower.FollowerConstants.rightRearMotorName;
 import static com.pedropathing.follower.FollowerConstants.leftFrontMotorDirection;
@@ -24,6 +25,8 @@ import static com.pedropathing.follower.FollowerConstants.translationalPIDFSwitc
 import static com.pedropathing.follower.FollowerConstants.useSecondaryDrivePID;
 import static com.pedropathing.follower.FollowerConstants.useSecondaryHeadingPID;
 import static com.pedropathing.follower.FollowerConstants.useSecondaryTranslationalPID;
+import static com.pedropathing.follower.FollowerConstants.useVoltageCompensationInAuto;
+import static com.pedropathing.follower.FollowerConstants.useVoltageCompensationInTeleOp;
 
 import android.util.Log;
 
@@ -31,8 +34,8 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -88,7 +91,7 @@ public class Follower {
 
     private PathChain currentPathChain;
 
-    private final int BEZIER_CURVE_BINARY_STEP_LIMIT = FollowerConstants.BEZIER_CURVE_BINARY_STEP_LIMIT;
+    private final int BEZIER_CURVE_SEARCH_LIMIT = FollowerConstants.BEZIER_CURVE_SEARCH_LIMIT;
     private final int AVERAGED_VELOCITY_SAMPLE_NUMBER = FollowerConstants.AVERAGED_VELOCITY_SAMPLE_NUMBER;
 
     private int chainIndex;
@@ -151,10 +154,20 @@ public class Follower {
     public static boolean useHeading = true;
     public static boolean useDrive = true;
 
+    /*
+     * Voltage Compensation
+     * Credit to team 14343 Escape Velocity for the voltage code
+     * Credit to team 23511 Seattle Solvers for implementing the voltage code into Follower.java
+     */
+    private boolean cached = false;
+
+    private VoltageSensor voltageSensor;
+    public double voltage = 0;
+    private final ElapsedTime voltageTimer = new ElapsedTime();
+
     private boolean logDebug = true;
 
     private ElapsedTime zeroVelocityDetectedTimer;
-    private ElapsedTime pinpointRecalibrationTimer;
 
     /**
      * This creates a new Follower given a HardwareMap.
@@ -184,6 +197,9 @@ public class Follower {
     public void initialize() {
         poseUpdater = new PoseUpdater(hardwareMap);
         driveVectorScaler = new DriveVectorScaler(FollowerConstants.frontLeftVector);
+
+        voltageSensor = hardwareMap.voltageSensor.iterator().next();
+        voltageTimer.reset();
 
         leftFront = hardwareMap.get(DcMotorEx.class, leftFrontMotorName);
         leftRear = hardwareMap.get(DcMotorEx.class, leftRearMotorName);
@@ -463,7 +479,7 @@ public class Follower {
         isBusy = true;
         followingPathChain = false;
         currentPath = path;
-        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
     }
 
     /**
@@ -514,7 +530,7 @@ public class Follower {
         chainIndex = 0;
         currentPathChain = pathChain;
         currentPath = pathChain.getPath(chainIndex);
-        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
     }
 
     /**
@@ -524,7 +540,7 @@ public class Follower {
         pathStartTimes = new long[currentPathChain.size()];
         pathStartTimes[0] = System.currentTimeMillis();
         isBusy = true;
-        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
     }
 
     /**
@@ -566,12 +582,18 @@ public class Follower {
 
                     for (int i = 0; i < motors.size(); i++) {
                         if (Math.abs(motors.get(i).getPower() - drivePowers[i]) > FollowerConstants.motorCachingThreshold) {
-                            motors.get(i).setPower(drivePowers[i]);
+                            double voltageNormalized = getVoltageNormalized();
+
+                            if (useVoltageCompensationInAuto) {
+                                motors.get(i).setPower(drivePowers[i] * voltageNormalized);
+                            } else {
+                                motors.get(i).setPower(drivePowers[i]);
+                            }
                         }
                     }
                 } else {
                     if (isBusy) {
-                        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+                        closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
 
                         if (followingPathChain) updateCallbacks();
 
@@ -579,7 +601,13 @@ public class Follower {
 
                         for (int i = 0; i < motors.size(); i++) {
                             if (Math.abs(motors.get(i).getPower() - drivePowers[i]) > FollowerConstants.motorCachingThreshold) {
-                                motors.get(i).setPower(drivePowers[i]);
+                                double voltageNormalized = getVoltageNormalized();
+
+                                if (useVoltageCompensationInAuto) {
+                                    motors.get(i).setPower(drivePowers[i] * voltageNormalized);
+                                } else {
+                                    motors.get(i).setPower(drivePowers[i]);
+                                }
                             }
                         }
                     }
@@ -609,7 +637,7 @@ public class Follower {
                             followingPathChain = true;
                             chainIndex++;
                             currentPath = currentPathChain.getPath(chainIndex);
-                            closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_BINARY_STEP_LIMIT);
+                            closestPose = currentPath.getClosestPoint(poseUpdater.getPose(), BEZIER_CURVE_SEARCH_LIMIT);
                         } else {
                             // At last path, run some end detection stuff
                             // set isBusy to false if at end
@@ -656,7 +684,13 @@ public class Follower {
 
             for (int i = 0; i < motors.size(); i++) {
                 if (Math.abs(motors.get(i).getPower() - drivePowers[i]) > FollowerConstants.motorCachingThreshold) {
-                    motors.get(i).setPower(drivePowers[i]);
+                    double voltageNormalized = getVoltageNormalized();
+
+                    if (useVoltageCompensationInTeleOp) {
+                        motors.get(i).setPower(drivePowers[i] * voltageNormalized);
+                    } else {
+                        motors.get(i).setPower(drivePowers[i]);
+                    }
                 }
             }
         }
@@ -861,18 +895,18 @@ public class Follower {
         Vector velocity = new Vector(MathFunctions.dotProduct(getVelocity(), MathFunctions.normalizeVector(currentPath.getClosestPointTangentVector())), currentPath.getClosestPointTangentVector().getTheta());
 
         Vector forwardHeadingVector = new Vector(1.0, poseUpdater.getPose().getHeading());
+
         double forwardVelocity = MathFunctions.dotProduct(forwardHeadingVector, velocity);
         double forwardDistanceToGoal = MathFunctions.dotProduct(forwardHeadingVector, distanceToGoalVector);
-
         double forwardVelocityGoal = MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * forwardZeroPowerAcceleration * (forwardDistanceToGoal <= 0 ? 1 : -1) * forwardDistanceToGoal));
-        double forwardVelocityZeroPowerDecay = forwardVelocity - MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(forwardVelocity, 2) + 2 * forwardZeroPowerAcceleration * forwardDistanceToGoal));
+        double forwardVelocityZeroPowerDecay = forwardVelocity - MathFunctions.getSign(forwardDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(forwardVelocity, 2) + 2 * forwardZeroPowerAcceleration * Math.abs(forwardDistanceToGoal)));
 
         Vector lateralHeadingVector = new Vector(1.0, poseUpdater.getPose().getHeading() - Math.PI / 2);
         double lateralVelocity = MathFunctions.dotProduct(lateralHeadingVector, velocity);
         double lateralDistanceToGoal = MathFunctions.dotProduct(lateralHeadingVector, distanceToGoalVector);
 
         double lateralVelocityGoal = MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(-2 * currentPath.getZeroPowerAccelerationMultiplier() * lateralZeroPowerAcceleration * (lateralDistanceToGoal <= 0 ? 1 : -1) * lateralDistanceToGoal));
-        double lateralVelocityZeroPowerDecay = lateralVelocity - MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(lateralVelocity, 2) + 2 * lateralZeroPowerAcceleration * lateralDistanceToGoal));
+        double lateralVelocityZeroPowerDecay = lateralVelocity - MathFunctions.getSign(lateralDistanceToGoal) * Math.sqrt(Math.abs(Math.pow(lateralVelocity, 2) + 2 * lateralZeroPowerAcceleration * Math.abs(lateralDistanceToGoal)));
 
         Vector forwardVelocityError = new Vector(forwardVelocityGoal - forwardVelocityZeroPowerDecay - forwardVelocity, forwardHeadingVector.getTheta());
         Vector lateralVelocityError = new Vector(lateralVelocityGoal - lateralVelocityZeroPowerDecay - lateralVelocity, lateralHeadingVector.getTheta());
@@ -1194,5 +1228,35 @@ public class Follower {
 
     public boolean isPinpointCooked() {
         return poseUpdater.getLocalizer().isPinpointCooked();
+    }
+
+    /**
+     * @return The last cached voltage measurement.
+     */
+    public double getVoltage() {
+        if (voltageTimer.seconds() > cacheInvalidateSeconds && cacheInvalidateSeconds >= 0) {
+            cached = false;
+        }
+
+        if (!cached)
+            refreshVoltage();
+
+        return voltage;
+    }
+
+    /**
+     * @return A scalar that normalizes power outputs to the nominal voltage from the current voltage.
+     */
+    public double getVoltageNormalized() {
+        return Math.min(nominalVoltage / getVoltage(), 1);
+    }
+
+    /**
+     * Overrides the voltage cooldown.
+     */
+    public void refreshVoltage() {
+        cached = true;
+        voltage = voltageSensor.getVoltage();
+        voltageTimer.reset();
     }
 }
