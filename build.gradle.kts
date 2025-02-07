@@ -74,9 +74,6 @@ android {
 }
 
 dependencies {
-	implementation("junit:junit:4.12")
-	testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
-	testImplementation("junit:junit:4.12")
 	compileOnly("org.firstinspires.ftc:RobotCore:10.2.0")
 	compileOnly("org.firstinspires.ftc:Hardware:10.2.0")
 	compileOnly("org.firstinspires.ftc:FtcCommon:10.2.0")
@@ -101,7 +98,7 @@ publishing {
 		register<MavenPublication>("release") {
 			groupId = "com.pedropathing"
 			artifactId = "beta"
-			version = "1.0.8-beta2"
+			version = "1.0.8-beta3"
 
 			afterEvaluate {
 				from(components["release"])
