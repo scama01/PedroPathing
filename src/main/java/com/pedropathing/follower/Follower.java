@@ -1259,4 +1259,35 @@ public class Follower {
         voltage = voltageSensor.getVoltage();
         voltageTimer.reset();
     }
+
+    /** Turns a certain amount of degrees left
+     * @param radians the amount of radians to turn
+     * @param isLeft true if turning left, false if turning right
+     */
+    public void turn(double radians, boolean isLeft) {
+        Pose temp = new Pose(getPose().getX(), getPose().getY(), getPose().getHeading() + (isLeft ? radians : -radians));
+        holdPoint(temp);
+    }
+
+    /** Turns to a specific heading
+     * @param radians the heading in radians to turn to
+     */
+    public void turnTo(double radians) {
+        holdPoint(new Pose(getPose().getX(), getPose().getY(), Math.toRadians(radians)));
+    }
+
+    /** Turns to a specific heading in degrees
+     * @param degrees the heading in degrees to turn to
+     */
+    public void turnToDegrees(double degrees) {
+        turnTo(Math.toRadians(degrees));
+    }
+
+    /** Turns a certain amount of degrees left
+     * @param degrees the amount of degrees to turn
+     * @param isLeft true if turning left, false if turning right
+     */
+    public void turnDegrees(double degrees, boolean isLeft) {
+        turn(Math.toRadians(degrees), isLeft);
+    }
 }
